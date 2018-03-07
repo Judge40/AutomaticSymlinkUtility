@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:annotation>
+        <xs:documentation>Copyright:
+            The MIT License (MIT)
+
+            Copyright (c) 2018 Judge40
+
+            Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+            The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+            THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</xs:documentation>
+        <xs:documentation>Purpose: Used to define one or more symbolic links to be created by Automatic Symlink Utility.</xs:documentation>
+    </xs:annotation>
+    <xs:element name="symlinks" type="symlinksType"/>
+    <xs:complexType name="symlinksType">
+        <xs:choice maxOccurs="unbounded" minOccurs="1">
+            <xs:element name="group" type="groupType"/>
+            <xs:element name="symlink" type="symlinkType"/>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="groupType">
+        <xs:annotation>
+            <xs:documentation>Groups should be used to group related symbolic link definitions, such as multiple symlink for the same application.
+Specifying a context path will apply that context check to all child symlinks, if a child symlink also has a context path then both will be checked before the symbolic link is created.</xs:documentation>
+        </xs:annotation>
+        <xs:sequence>
+            <xs:element maxOccurs="unbounded" name="symlink" type="symlinkType"/>
+        </xs:sequence>
+        <xs:attribute name="name" type="nameAttType" use="required"/>
+        <xs:attribute name="contextPath" type="contextPathAttType"/>
+    </xs:complexType>
+    <xs:complexType name="symlinkType">
+        <xs:sequence>
+            <xs:element name="linkPath" type="linkPathType"/>
+            <xs:element name="targetPath" type="targetPathType"/>
+        </xs:sequence>
+        <xs:attribute name="contextPath" type="contextPathAttType"/>
+    </xs:complexType>
+    <xs:simpleType name="linkPathType">
+        <xs:annotation>
+            <xs:documentation>The path of the symbolic link itself, where the link will be placed.</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="targetPathType">
+        <xs:annotation>
+            <xs:documentation>The target of the symbolic link, where the actual file will be stored.</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="contextPathAttType">
+        <xs:annotation>
+            <xs:documentation>Can be used to specify a file or folder path as the context of the symbolic link(s), if the path does not exist then management of the symbolic link(s) will be skipped.</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="nameAttType">
+        <xs:annotation>
+            <xs:documentation>The name of the group of symbolic links.</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>
