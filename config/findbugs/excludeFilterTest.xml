@@ -1,0 +1,10 @@
+<FindBugsFilter>
+    <Match>
+        <Class name="~.+Test"/>
+        <Bug code="UwF"/>
+    </Match>
+    <Match>
+        <Class name="~.+Test\$[0-9]+"/>
+        <Bug code="SIC"/>
+    </Match>
+</FindBugsFilter>

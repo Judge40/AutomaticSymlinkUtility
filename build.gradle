@@ -1,12 +1,39 @@
 plugins {
-    id 'java'
-}
-
-dependencies {
-    // JUnit dependency.
-    testImplementation 'junit:junit:4.12'
+  id "checkstyle"
+  id "findbugs"
+  id "java"
+  id "pmd"
 }
 
 repositories {
-    jcenter()
+  jcenter()
+}
+
+dependencies {
+  // JMockit dependency.
+  testImplementation "org.jmockit:jmockit:1.38"
+
+  // JUnit dependency.
+  testImplementation "junit:junit:4.12"
+}
+
+findbugs {
+  effort = "max"
+  reportLevel = "low"
+}
+
+findbugsTest {
+  excludeFilter = file("$rootProject.projectDir/config/findbugs/excludeFilterTest.xml")
+}
+
+tasks.withType(FindBugs) {
+  reports {
+    xml.enabled = false
+    html.enabled = true
+  }
+}
+
+test {
+  systemProperties["jmockit-coverage-metrics"] = "all"
+  systemProperties["jmockit-coverage-outputDir"] = "build/reports/coverage"
 }
