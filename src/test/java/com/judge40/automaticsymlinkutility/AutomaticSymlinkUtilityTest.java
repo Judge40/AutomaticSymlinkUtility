@@ -19,11 +19,16 @@
 
 package com.judge40.automaticsymlinkutility;
 
+import com.judge40.automaticsymlinkutility.SymlinkCreationResult.Status;
+
 import mockit.Mocked;
 import mockit.Tested;
 import mockit.Verifications;
+import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -97,4 +102,136 @@ public class AutomaticSymlinkUtilityTest {
     // Call the method under test.
     AutomaticSymlinkUtility.main(new String[] {"", ""});
   }
+
+  /**
+   * Test that the link is skipped when the link path does not exist and the target path does not
+   * exist.
+   */
+  @Test
+  public void testCreateSymbolicLink_linkNotExistsTargetNotExists_skipped() {
+    // Set up test data.
+    Path link = Paths.get("linkNotExists");
+    Path target = Paths.get("targetNotExists");
+
+    // Call the method under test.
+    SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
+
+    // Perform assertions.
+    Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
+        CoreMatchers.is(Status.SKIPPED));
+
+    String expectedMessage =
+        String.format("A link was not created because neither '%s' or '%s' exist.", link, target);
+    Assert.assertThat("The result's message did not match the expected value.", result.getMessage(),
+        CoreMatchers.is(expectedMessage));
+  }
+
+  /**
+   * Test that the link is created when the link path does not exist and the target path is a file.
+   */
+  @Test
+  public void testCreateSymbolicLink_linkNotExistsTargetIsFile_created() throws IOException {
+    // Set up test data.
+    Path testDirectory =
+        Files.createTempDirectory("testCreateSymbolicLink_linkNotExistsTargetIsFile_created");
+    testDirectory.toFile().deleteOnExit();
+
+    Path link = testDirectory.resolve("linkNotExists");
+
+    Path target = Files.createTempFile(testDirectory, "targetFile", null);
+    target.toFile().deleteOnExit();
+
+    // Call the method under test.
+    SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
+    link.toFile().deleteOnExit();
+
+    // Perform assertions.
+    Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
+        CoreMatchers.is(Status.CREATED));
+
+    String expectedMessage =
+        String.format("A link was created between '%s' and '%s'.", link, target);
+    Assert.assertThat("The result's message did not match the expected value.", result.getMessage(),
+        CoreMatchers.is(expectedMessage));
+
+    Assert.assertThat("The link path was expected to be a symbolic link.",
+        Files.isSymbolicLink(link), CoreMatchers.is(true));
+    Assert.assertThat("The link path did not point to the expected file.",
+        Files.readSymbolicLink(link), CoreMatchers.is(target));
+  }
+
+  /**
+   * Test that the link is created when the link path does not exist and the target path is a
+   * directory.
+   */
+  @Test
+  public void testCreateSymbolicLink_linkNotExistsTargetIsDirectory_created() throws IOException {
+    // Set up test data.
+    Path testDirectory =
+        Files.createTempDirectory("testCreateSymbolicLink_linkNotExistsTargetIsDirectory_created");
+    testDirectory.toFile().deleteOnExit();
+
+    Path link = testDirectory.resolve("linkNotExists");
+
+    Path target = Files.createTempDirectory(testDirectory, "targetDirectory");
+    target.toFile().deleteOnExit();
+
+    // Call the method under test.
+    SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
+    link.toFile().deleteOnExit();
+
+    // Perform assertions.
+    Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
+        CoreMatchers.is(Status.CREATED));
+
+    String expectedMessage =
+        String.format("A link was created between '%s' and '%s'.", link, target);
+    Assert.assertThat("The result's message did not match the expected value.", result.getMessage(),
+        CoreMatchers.is(expectedMessage));
+
+    Assert.assertThat("The link path was expected to be a symbolic link.",
+        Files.isSymbolicLink(link), CoreMatchers.is(true));
+    Assert.assertThat("The link path did not point to the expected file.",
+        Files.readSymbolicLink(link), CoreMatchers.is(target));
+  }
+
+  /**
+   * Test that the link is created when the link path does not exist and the target path is a
+   * symbolic link.
+   */
+  @Test
+  public void testCreateSymbolicLink_linkNotExistsTargetIsSymbolicLink_created()
+      throws IOException {
+    // Set up test data.
+    Path testDirectory = Files
+        .createTempDirectory("testCreateSymbolicLink_linkNotExistsTargetIsSymbolicLink_created");
+    testDirectory.toFile().deleteOnExit();
+
+    Path link = testDirectory.resolve("linkNotExists");
+
+    Path targetLinkTarget = Files.createTempFile(testDirectory, "targetLinkFile", null);
+    targetLinkTarget.toFile().deleteOnExit();
+    Path target =
+        Files.createSymbolicLink(testDirectory.resolve("targetSymbolicLink"), targetLinkTarget);
+    target.toFile().deleteOnExit();
+
+    // Call the method under test.
+    SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
+    link.toFile().deleteOnExit();
+
+    // Perform assertions.
+    Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
+        CoreMatchers.is(Status.CREATED));
+
+    String expectedMessage =
+        String.format("A link was created between '%s' and '%s'.", link, target);
+    Assert.assertThat("The result's message did not match the expected value.", result.getMessage(),
+        CoreMatchers.is(expectedMessage));
+
+    Assert.assertThat("The link path was expected to be a symbolic link.",
+        Files.isSymbolicLink(link), CoreMatchers.is(true));
+    Assert.assertThat("The link path did not point to the expected file.",
+        Files.readSymbolicLink(link), CoreMatchers.is(target));
+  }
 }
+

@@ -98,6 +98,26 @@ public class AutomaticSymlinkUtility {
    * @return A {@link SymlinkCreationResult} with a status and message based on the actions taken.
    */
   protected static SymlinkCreationResult createSymbolicLink(Path link, Path target) {
-    return new SymlinkCreationResult(Status.FAILED, "Not yet implemented.");
+    Status status = Status.FAILED;
+    String message = "Not yet implemented.";
+
+    try {
+      if (Files.notExists(link)) {
+        if (Files.exists(target)) {
+          Files.createSymbolicLink(link, target);
+          status = Status.CREATED;
+          message = String.format("A link was created between '%s' and '%s'.", link, target);
+        } else {
+          status = Status.SKIPPED;
+          message = String.format("A link was not created because neither '%s' or '%s' exist.",
+              link, target);
+        }
+      }
+    } catch (IOException ioe) {
+      status = Status.FAILED;
+      message = ioe.getLocalizedMessage();
+    }
+
+    return new SymlinkCreationResult(status, message);
   }
 }
