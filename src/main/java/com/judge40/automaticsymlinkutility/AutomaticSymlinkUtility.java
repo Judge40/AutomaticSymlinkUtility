@@ -102,7 +102,18 @@ public class AutomaticSymlinkUtility {
     String message = "Not yet implemented.";
 
     try {
-      if (Files.notExists(link)) {
+      if (Files.exists(link)) {
+        if (Files.exists(target)) {
+          status = Status.SKIPPED;
+          message = String.format("A link was not created because both '%s' and '%s' exist.", link,
+              target);
+        } else if (Files.isRegularFile(link)) {
+          Files.move(link, target);
+          Files.createSymbolicLink(link, target);
+          status = Status.CREATED;
+          message = String.format("A link was created between '%s' and '%s'.", link, target);
+        }
+      } else {
         if (Files.exists(target)) {
           Files.createSymbolicLink(link, target);
           status = Status.CREATED;
@@ -112,6 +123,7 @@ public class AutomaticSymlinkUtility {
           message = String.format("A link was not created because neither '%s' or '%s' exist.",
               link, target);
         }
+
       }
     } catch (IOException ioe) {
       status = Status.FAILED;
