@@ -112,6 +112,12 @@ public class AutomaticSymlinkUtility {
           Files.createSymbolicLink(link, target);
           status = Status.CREATED;
           message = String.format("A link was created between '%s' and '%s'.", link, target);
+        } else if (Files.isDirectory(link)) {
+          MoveDirectoryVisitor moveVisitor = new MoveDirectoryVisitor(link, target);
+          Files.walkFileTree(link, moveVisitor);
+          Files.createSymbolicLink(link, target);
+          status = Status.CREATED;
+          message = String.format("A link was created between '%s' and '%s'.", link, target);
         }
       } else {
         if (Files.exists(target)) {
