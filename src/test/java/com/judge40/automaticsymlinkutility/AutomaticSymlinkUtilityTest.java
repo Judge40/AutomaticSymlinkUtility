@@ -21,6 +21,7 @@ package com.judge40.automaticsymlinkutility;
 
 import com.judge40.automaticsymlinkutility.SymlinkCreationResult.Status;
 
+import mockit.Expectations;
 import mockit.Mocked;
 import mockit.Tested;
 import mockit.Verifications;
@@ -168,6 +169,9 @@ public class AutomaticSymlinkUtilityTest {
         Files.isSymbolicLink(link), CoreMatchers.is(true));
     Assert.assertThat("The link path did not point to the expected file.",
         Files.readSymbolicLink(link), CoreMatchers.is(target));
+
+    Assert.assertThat("The target file path was expected to be a file.",
+        Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
   }
 
   /**
@@ -206,6 +210,8 @@ public class AutomaticSymlinkUtilityTest {
     Assert.assertThat("The link path did not point to the expected file.",
         Files.readSymbolicLink(link), CoreMatchers.is(target));
 
+    Assert.assertThat("The target path was expected to be a directory.",
+        Files.isDirectory(target, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
     Assert.assertThat("The target file path was expected to be a file.",
         Files.isRegularFile(targetFile, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
   }
@@ -247,6 +253,11 @@ public class AutomaticSymlinkUtilityTest {
         Files.isSymbolicLink(link), CoreMatchers.is(true));
     Assert.assertThat("The link path did not point to the expected file.",
         Files.readSymbolicLink(link), CoreMatchers.is(target));
+
+    Assert.assertThat("The target path was expected to be a symbolic link.",
+        Files.isSymbolicLink(target), CoreMatchers.is(true));
+    Assert.assertThat("The target's link target path was expected to be a file.",
+        Files.isRegularFile(targetLinkTarget, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
   }
 
   /**
@@ -305,7 +316,6 @@ public class AutomaticSymlinkUtilityTest {
 
     // Call the method under test.
     SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
-    link.toFile().deleteOnExit();
 
     // Perform assertions.
     Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
@@ -342,7 +352,6 @@ public class AutomaticSymlinkUtilityTest {
 
     // Call the method under test.
     SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
-    link.toFile().deleteOnExit();
 
     // Perform assertions.
     Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
@@ -384,7 +393,6 @@ public class AutomaticSymlinkUtilityTest {
 
     // Call the method under test.
     SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
-    link.toFile().deleteOnExit();
 
     // Perform assertions.
     Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
@@ -465,7 +473,6 @@ public class AutomaticSymlinkUtilityTest {
 
     // Call the method under test.
     SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
-    link.toFile().deleteOnExit();
 
     // Perform assertions.
     Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
@@ -508,7 +515,6 @@ public class AutomaticSymlinkUtilityTest {
 
     // Call the method under test.
     SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
-    link.toFile().deleteOnExit();
 
     // Perform assertions.
     Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
@@ -555,7 +561,6 @@ public class AutomaticSymlinkUtilityTest {
 
     // Call the method under test.
     SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
-    link.toFile().deleteOnExit();
 
     // Perform assertions.
     Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
@@ -573,5 +578,210 @@ public class AutomaticSymlinkUtilityTest {
 
     Assert.assertThat("The target path was expected to be a symbolic link.",
         Files.isSymbolicLink(target), CoreMatchers.is(true));
+  }
+
+  /**
+   * Test that the link is skipped when the link path is a symbolic link and the target path does
+   * not exist.
+   */
+  @Test
+  public void testCreateSymbolicLink_linkIsSymbolicLinkTargetNotExists_skipped()
+      throws IOException {
+    // Set up test data.
+    Path testDirectory = Files
+        .createTempDirectory("testCreateSymbolicLink_linkIsSymbolicLinkTargetNotExists_skipped");
+    testDirectory.toFile().deleteOnExit();
+
+    Path linkLinkTarget = Files.createTempFile(testDirectory, "linkLinkFile", null);
+    linkLinkTarget.toFile().deleteOnExit();
+    Path link = Files.createSymbolicLink(testDirectory.resolve("linkSymbolicLink"), linkLinkTarget);
+    link.toFile().deleteOnExit();
+
+    Path target = testDirectory.resolve("targetNotExists");
+
+    // Call the method under test.
+    SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
+
+    // Perform assertions.
+    Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
+        CoreMatchers.is(Status.SKIPPED));
+
+    String expectedMessage =
+        String.format("A link was not created because '%s' is already a symbolic link.", link);
+    Assert.assertThat("The result's message did not match the expected value.", result.getMessage(),
+        CoreMatchers.is(expectedMessage));
+
+    Assert.assertThat("The link path was expected to be a symbolic link.",
+        Files.isSymbolicLink(link), CoreMatchers.is(true));
+    Assert.assertThat("The link's link target path was expected to be a file.",
+        Files.isRegularFile(linkLinkTarget, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
+
+    Assert.assertThat("The target path was expected to not exist.", Files.exists(target),
+        CoreMatchers.is(false));
+  }
+
+  /**
+   * Test that the link is skipped when the link path is a symbolic link and the target path is a
+   * file.
+   */
+  @Test
+  public void testCreateSymbolicLink_linkIsSymbolicLinkTargetIsFile_skipped() throws IOException {
+    // Set up test data.
+    Path testDirectory =
+        Files.createTempDirectory("testCreateSymbolicLink_linkIsSymbolicLinkTargetIsFile_skipped");
+    testDirectory.toFile().deleteOnExit();
+
+    Path linkLinkTarget = Files.createTempFile(testDirectory, "linkLinkFile", null);
+    linkLinkTarget.toFile().deleteOnExit();
+    Path link = Files.createSymbolicLink(testDirectory.resolve("linkSymbolicLink"), linkLinkTarget);
+    link.toFile().deleteOnExit();
+
+    Path target = Files.createTempFile(testDirectory, "targetFile", null);
+    target.toFile().deleteOnExit();
+
+    // Call the method under test.
+    SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
+
+    // Perform assertions.
+    Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
+        CoreMatchers.is(Status.SKIPPED));
+
+    String expectedMessage =
+        String.format("A link was not created because '%s' is already a symbolic link.", link);
+    Assert.assertThat("The result's message did not match the expected value.", result.getMessage(),
+        CoreMatchers.is(expectedMessage));
+
+    Assert.assertThat("The link path was expected to be a symbolic link.",
+        Files.isSymbolicLink(link), CoreMatchers.is(true));
+    Assert.assertThat("The link's link target path was expected to be a file.",
+        Files.isRegularFile(linkLinkTarget, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
+
+    Assert.assertThat("The target path was expected to be a file.",
+        Files.isRegularFile(target, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
+  }
+
+  /**
+   * Test that the link is skipped when the link path is a symbolic link and the target path is a
+   * directory.
+   */
+  @Test
+  public void testCreateSymbolicLink_linkIsSymbolicLinkTargetIsDirectory_skipped()
+      throws IOException {
+    // Set up test data.
+    Path testDirectory = Files
+        .createTempDirectory("testCreateSymbolicLink_linkIsSymbolicLinkTargetIsDirectory_skipped");
+    testDirectory.toFile().deleteOnExit();
+
+    Path linkLinkTarget = Files.createTempFile(testDirectory, "linkLinkFile", null);
+    linkLinkTarget.toFile().deleteOnExit();
+    Path link = Files.createSymbolicLink(testDirectory.resolve("linkSymbolicLink"), linkLinkTarget);
+    link.toFile().deleteOnExit();
+
+    Path target = Files.createTempDirectory(testDirectory, "targetDirectory");
+    target.toFile().deleteOnExit();
+    Path targetFile = Files.createTempFile(target, "targetFile", null);
+    targetFile.toFile().deleteOnExit();
+
+    // Call the method under test.
+    SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
+
+    // Perform assertions.
+    Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
+        CoreMatchers.is(Status.SKIPPED));
+
+    String expectedMessage =
+        String.format("A link was not created because '%s' is already a symbolic link.", link);
+    Assert.assertThat("The result's message did not match the expected value.", result.getMessage(),
+        CoreMatchers.is(expectedMessage));
+
+    Assert.assertThat("The link path was expected to be a symbolic link.",
+        Files.isSymbolicLink(link), CoreMatchers.is(true));
+    Assert.assertThat("The link's link target path was expected to be a file.",
+        Files.isRegularFile(linkLinkTarget, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
+
+    Assert.assertThat("The target path was expected to be a directory.",
+        Files.isDirectory(target, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
+    Assert.assertThat("The target file path was expected to be a file.",
+        Files.isRegularFile(targetFile, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
+  }
+
+  /**
+   * Test that the link is skipped when the link path is a symbolic link and the target path is a
+   * symbolic link.
+   */
+  @Test
+  public void testCreateSymbolicLink_linkIsSymbolicLinkTargetIsSymbolicLink_skipped()
+      throws IOException {
+    // Set up test data.
+    Path testDirectory = Files.createTempDirectory(
+        "testCreateSymbolicLink_linkIsSymbolicLinkTargetIsSymbolicLink_skipped");
+    testDirectory.toFile().deleteOnExit();
+
+    Path linkLinkTarget = Files.createTempFile(testDirectory, "linkLinkFile", null);
+    linkLinkTarget.toFile().deleteOnExit();
+    Path link = Files.createSymbolicLink(testDirectory.resolve("linkSymbolicLink"), linkLinkTarget);
+    link.toFile().deleteOnExit();
+
+    Path targetLinkTarget = Files.createTempFile(testDirectory, "targetLinkFile", null);
+    targetLinkTarget.toFile().deleteOnExit();
+    Path target =
+        Files.createSymbolicLink(testDirectory.resolve("targetSymbolicLink"), targetLinkTarget);
+    target.toFile().deleteOnExit();
+
+    // Call the method under test.
+    SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
+
+    // Perform assertions.
+    Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
+        CoreMatchers.is(Status.SKIPPED));
+
+    String expectedMessage =
+        String.format("A link was not created because '%s' is already a symbolic link.", link);
+    Assert.assertThat("The result's message did not match the expected value.", result.getMessage(),
+        CoreMatchers.is(expectedMessage));
+
+    Assert.assertThat("The link path was expected to be a symbolic link.",
+        Files.isSymbolicLink(link), CoreMatchers.is(true));
+    Assert.assertThat("The link's link target path was expected to be a file.",
+        Files.isRegularFile(linkLinkTarget, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
+
+    Assert.assertThat("The target path was expected to be a symbolic link.",
+        Files.isSymbolicLink(target), CoreMatchers.is(true));
+    Assert.assertThat("The target's link target path was expected to be a file.",
+        Files.isRegularFile(targetLinkTarget, LinkOption.NOFOLLOW_LINKS), CoreMatchers.is(true));
+  }
+
+  /**
+   * Test that the link creation fails when there is an exception.
+   */
+  @Test
+  public void testCreateSymbolicLink_exception_failed() throws IOException {
+    // Set up test data.
+    Path testDirectory = Files.createTempDirectory("testCreateSymbolicLink_exception_failed");
+    testDirectory.toFile().deleteOnExit();
+
+    Path link = Files.createTempFile(testDirectory, "link", null);
+    link.toFile().deleteOnExit();
+
+    Path target = testDirectory.resolve("notExists");
+
+    // Record expectations.
+    new Expectations(Files.class) {
+      {
+        Files.move(link, target);
+        result = new IOException("Expected exception.");
+      }
+    };
+
+    // Call the method under test.
+    SymlinkCreationResult result = AutomaticSymlinkUtility.createSymbolicLink(link, target);
+
+    // Perform assertions.
+    Assert.assertThat("The result's status did not match the expected value.", result.getStatus(),
+        CoreMatchers.is(Status.FAILED));
+
+    String expectedMessage = "Expected exception.";
+    Assert.assertThat("The result's message did not match the expected value.", result.getMessage(),
+        CoreMatchers.is(expectedMessage));
   }
 }

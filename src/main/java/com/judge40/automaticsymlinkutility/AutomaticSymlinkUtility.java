@@ -98,12 +98,16 @@ public class AutomaticSymlinkUtility {
    * @return A {@link SymlinkCreationResult} with a status and message based on the actions taken.
    */
   protected static SymlinkCreationResult createSymbolicLink(Path link, Path target) {
-    Status status = Status.FAILED;
-    String message = "Not yet implemented.";
+    Status status;
+    String message;
 
     try {
       if (Files.exists(link)) {
-        if (Files.exists(target)) {
+        if (Files.isSymbolicLink(link)) {
+          status = Status.SKIPPED;
+          message = String.format("A link was not created because '%s' is already a symbolic link.",
+              link);
+        } else if (Files.exists(target)) {
           status = Status.SKIPPED;
           message = String.format("A link was not created because both '%s' and '%s' exist.", link,
               target);
@@ -118,6 +122,11 @@ public class AutomaticSymlinkUtility {
           Files.createSymbolicLink(link, target);
           status = Status.CREATED;
           message = String.format("A link was created between '%s' and '%s'.", link, target);
+        } else {
+          status = Status.FAILED;
+          message = String.format(
+              "A link was not created because '%s' and '%s' were in an unknown state.", link,
+              target);
         }
       } else {
         if (Files.exists(target)) {
@@ -129,7 +138,6 @@ public class AutomaticSymlinkUtility {
           message = String.format("A link was not created because neither '%s' or '%s' exist.",
               link, target);
         }
-
       }
     } catch (IOException ioe) {
       status = Status.FAILED;
