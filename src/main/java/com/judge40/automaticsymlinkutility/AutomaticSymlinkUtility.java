@@ -43,10 +43,20 @@ import javax.xml.validation.SchemaFactory;
  */
 public class AutomaticSymlinkUtility {
 
+  private static final String LINK_CREATED = "A link was created between '%s' and '%s'.";
+  private static final String LINK_NOT_CREATED_ALREADY_LINK =
+      "A link was not created because '%s' is already a symbolic link.";
+  private static final String LINK_NOT_CREATED_BOTH_EXIST =
+      "A link was not created because both '%s' and '%s' exist.";
+  private static final String LINK_NOT_CREATED_NEITHER_EXIST =
+      "A link was not created because neither '%s' or '%s' exist.";
+  private static final String LINK_NOT_CREATED_UNKNOWN_STATE =
+      "A link was not created because '%s' and '%s' were in an unknown state.";
+
   /**
    * Parses the symlink definition file and creates symbolic links as needed.
    * 
-   * @param args Should contain the symlinks definition file as args[0].
+   * @param args Should contain the path to the symlinks definition files as the only argument.
    * @throws IOException An IO exception from the parser, possibly from a byte stream or character
    *         stream supplied by the application.
    * @throws ParserConfigurationException If a parser cannot be created which satisfies the
@@ -56,13 +66,16 @@ public class AutomaticSymlinkUtility {
    */
   public static void main(String[] args)
       throws IOException, ParserConfigurationException, SAXException, URISyntaxException {
-    // Verify args are correct and point to an actual file.
+    // Verify that the arguments are correct and point to an existing file.
     if (args.length != 1) {
       throw new IllegalArgumentException("Wrong number of arguments, one expected.");
     }
 
-    if (Files.notExists(Paths.get(args[0]))) {
-      throw new IllegalArgumentException("The definition file does not exist.");
+    Path definitions = Paths.get(args[0]);
+
+    if (Files.notExists(definitions)) {
+      throw new IllegalArgumentException(
+          String.format("The symlink definition file '%s' does not exist.", definitions));
     }
 
     // Set the parser to use the symlinks.xsd schema.
@@ -85,7 +98,7 @@ public class AutomaticSymlinkUtility {
     xmlReader.setErrorHandler(symlinksHandler);
 
     // Parse the definition file.
-    xmlReader.parse(args[0]);
+    xmlReader.parse(definitions.toString());
   }
 
   /**
@@ -98,46 +111,40 @@ public class AutomaticSymlinkUtility {
    * @return A {@link SymlinkCreationResult} with a status and message based on the actions taken.
    */
   protected static SymlinkCreationResult createSymbolicLink(Path link, Path target) {
-    Status status;
-    String message;
+    Status status = Status.FAILED;
+    String message = String.format(LINK_NOT_CREATED_UNKNOWN_STATE, link, target);
+
+    boolean createLink = false;
 
     try {
       if (Files.exists(link)) {
         if (Files.isSymbolicLink(link)) {
           status = Status.SKIPPED;
-          message = String.format("A link was not created because '%s' is already a symbolic link.",
-              link);
+          message = String.format(LINK_NOT_CREATED_ALREADY_LINK, link);
         } else if (Files.exists(target)) {
           status = Status.SKIPPED;
-          message = String.format("A link was not created because both '%s' and '%s' exist.", link,
-              target);
+          message = String.format(LINK_NOT_CREATED_BOTH_EXIST, link, target);
         } else if (Files.isRegularFile(link)) {
           Files.move(link, target);
-          Files.createSymbolicLink(link, target);
-          status = Status.CREATED;
-          message = String.format("A link was created between '%s' and '%s'.", link, target);
+          createLink = true;
         } else if (Files.isDirectory(link)) {
           MoveDirectoryVisitor moveVisitor = new MoveDirectoryVisitor(link, target);
           Files.walkFileTree(link, moveVisitor);
-          Files.createSymbolicLink(link, target);
-          status = Status.CREATED;
-          message = String.format("A link was created between '%s' and '%s'.", link, target);
-        } else {
-          status = Status.FAILED;
-          message = String.format(
-              "A link was not created because '%s' and '%s' were in an unknown state.", link,
-              target);
+          createLink = true;
         }
       } else {
         if (Files.exists(target)) {
-          Files.createSymbolicLink(link, target);
-          status = Status.CREATED;
-          message = String.format("A link was created between '%s' and '%s'.", link, target);
+          createLink = true;
         } else {
           status = Status.SKIPPED;
-          message = String.format("A link was not created because neither '%s' or '%s' exist.",
-              link, target);
+          message = String.format(LINK_NOT_CREATED_NEITHER_EXIST, link, target);
         }
+      }
+
+      if (createLink) {
+        Files.createSymbolicLink(link, target);
+        status = Status.CREATED;
+        message = String.format(LINK_CREATED, link, target);
       }
     } catch (IOException ioe) {
       status = Status.FAILED;
